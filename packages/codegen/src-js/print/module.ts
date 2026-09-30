@@ -90,7 +90,8 @@ export function printImportDeclaration(node: ESTree.ImportDeclaration, state: St
           write(state, ", ", CAT_OTHER);
         }
 
-        write(state, "* as ", CAT_OTHER);
+        printNamespaceExports(specifier.exportsFilter, state);
+        write(state, " as ", CAT_OTHER);
         writeWithMapNamed(
           state,
           specifier.local.name,
@@ -201,6 +202,31 @@ function moduleExportName(node: ESTree.ModuleExportName, state: State): string {
 }
 
 /**
+ * Print the `*` of `* as ns`, or the `{ a, b }` of a filtered namespace `{ a, b } as ns`.
+ */
+function printNamespaceExports(
+  exportsFilter: ESTree.ModuleExportName[] | null,
+  state: State,
+): void {
+  if (exportsFilter == null) {
+    write(state, "*", CAT_OTHER);
+    return;
+  }
+
+  write(state, "{", CAT_OTHER);
+  const { length } = exportsFilter;
+  if (length > 0) {
+    write(state, " ", CAT_OTHER);
+    for (let i = 0; i < length; i++) {
+      if (i > 0) write(state, ", ", CAT_OTHER);
+      moduleExportName(exportsFilter[i], state);
+    }
+    write(state, " ", CAT_OTHER);
+  }
+  write(state, "}", CAT_OTHER);
+}
+
+/**
  * Print an `export` statement which names what it exports, whether that is a declaration,
  * a list of specifiers, or a list re-exported from another module.
  */
@@ -297,6 +323,7 @@ export function printExportNamedDeclaration(node: ExportNamedDeclarationNode, st
 
 /**
  * Print `export * from "…"`, with the `as name` form where the AST has one,
+ * the filtered form `export { a, b } as name from "…"`,
  * and the `defer` phase of `export defer * as name from "…"`.
  */
 export function printExportAllDeclaration(node: ESTree.ExportAllDeclaration, state: State): void {
@@ -305,7 +332,8 @@ export function printExportAllDeclaration(node: ESTree.ExportAllDeclaration, sta
   let keyword = node.phase == null ? "export" : `export ${node.phase}`;
   if (TS && node.exportKind === "type") keyword += " type";
 
-  writeWithMap(state, `${keyword} *`, CAT_OTHER, node.start, node.end, node);
+  writeWithMap(state, `${keyword} `, CAT_OTHER, node.start, node.end, node);
+  printNamespaceExports(node.exportsFilter, state);
 
   if (node.exported != null) {
     write(state, " as ", CAT_OTHER);

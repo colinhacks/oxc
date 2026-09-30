@@ -2647,6 +2647,7 @@ pub struct ImportDefaultSpecifier<'a> {
 /// ## Example
 /// ```ts
 /// import * as local from "source";
+/// import { a, b } as local from "source";
 /// ```
 #[ast(visit)]
 #[derive(Debug)]
@@ -2655,6 +2656,11 @@ pub struct ImportDefaultSpecifier<'a> {
 pub struct ImportNamespaceSpecifier<'a> {
     pub node_id: Cell<NodeId>,
     pub span: Span,
+    /// The names in a filtered namespace import: `Some([a, b])` for `import { a, b } as ns`.
+    /// `None` for `import * as ns`.
+    ///
+    /// <https://github.com/tc39/proposal-deferred-reexports>
+    pub exports_filter: Option<Vec<'a, ModuleExportName<'a>>>,
     pub local: BindingIdentifier<'a>,
 }
 
@@ -2839,14 +2845,22 @@ pub struct ExportDefaultDeclaration<'a> {
 /// //          _______ exported
 /// export * as numbers from '../numbers.js';
 /// //                       ^^^^^^^^^^^^^^^ source
+/// //       ____ exports_filter
+/// export { a, b } as numbers from '../numbers.js';
 /// ```
 #[ast(visit)]
 #[derive(Debug)]
 #[generate_derive(CloneIn, Dummy, ReplaceWith, TakeIn)]
 #[generate_derive(ContentEq, ESTree, GetNodeId, GetSpan, GetSpanMut, UnstableAddress)]
+#[estree(field_order(exported, exports_filter, source, phase, with_clause, export_kind, span))]
 pub struct ExportAllDeclaration<'a> {
     pub node_id: Cell<NodeId>,
     pub span: Span,
+    /// The names in a filtered namespace re-export: `Some([a, b])` for
+    /// `export { a, b } as ns from 'module'`. Only ever `Some` when `exported` is `Some`.
+    ///
+    /// <https://github.com/tc39/proposal-deferred-reexports>
+    pub exports_filter: Option<Vec<'a, ModuleExportName<'a>>>,
     /// If this declaration is re-named
     pub exported: Option<ModuleExportName<'a>>,
     pub source: StringLiteral<'a>,

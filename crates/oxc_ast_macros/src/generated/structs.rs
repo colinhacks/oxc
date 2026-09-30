@@ -1387,7 +1387,7 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         (
             "ExportAllDeclaration",
             StructDetails {
-                field_order: Some(&[1, 0, 4, 5, 2, 6, 3]),
+                field_order: Some(&[1, 0, 4, 5, 6, 2, 7, 3]),
                 is_node: true,
                 is_transparent: false,
             },
@@ -1458,7 +1458,11 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         ),
         (
             "ImportNamespaceSpecifier",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2, 3]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "ExportFromDeclaration",

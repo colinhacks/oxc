@@ -2681,7 +2681,8 @@ function walkImportNamespaceSpecifier(pos, ast, visitors) {
     if (enter !== null) enter(node);
   }
 
-  walkBindingIdentifier(pos + 16, ast, visitors);
+  walkOptionVecModuleExportName(pos + 16, ast, visitors);
+  walkBindingIdentifier(pos + 40, ast, visitors);
 
   if (exit !== null) exit(node);
 }
@@ -2797,9 +2798,10 @@ function walkExportAllDeclaration(pos, ast, visitors) {
     if (enter !== null) enter(node);
   }
 
-  walkOptionModuleExportName(pos + 16, ast, visitors);
-  walkStringLiteral(pos + 72, ast, visitors);
-  walkOptionBoxWithClause(pos + 120, ast, visitors);
+  walkOptionVecModuleExportName(pos + 16, ast, visitors);
+  walkOptionModuleExportName(pos + 40, ast, visitors);
+  walkStringLiteral(pos + 96, ast, visitors);
+  walkOptionBoxWithClause(pos + 144, ast, visitors);
 
   if (exit !== null) exit(node);
 }
@@ -5629,6 +5631,22 @@ function walkBoxImportDefaultSpecifier(pos, ast, visitors) {
 
 function walkBoxImportNamespaceSpecifier(pos, ast, visitors) {
   return walkImportNamespaceSpecifier(ast.buffer.int32[pos >> 2], ast, visitors);
+}
+
+function walkVecModuleExportName(pos, ast, visitors) {
+  const { int32 } = ast.buffer,
+    pos32 = pos >> 2;
+  pos = int32[pos32];
+  const endPos = pos + int32[pos32 + 2] * 56;
+  while (pos < endPos) {
+    walkModuleExportName(pos, ast, visitors);
+    pos += 56;
+  }
+}
+
+function walkOptionVecModuleExportName(pos, ast, visitors) {
+  if (!(ast.buffer.int32[pos >> 2] === 0 && ast.buffer.int32[(pos >> 2) + 1] === 0))
+    walkVecModuleExportName(pos, ast, visitors);
 }
 
 function walkVecImportAttribute(pos, ast, visitors) {

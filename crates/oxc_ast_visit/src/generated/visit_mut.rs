@@ -1311,6 +1311,11 @@ pub trait VisitMut<'a>: Sized {
     }
 
     #[inline]
+    fn visit_module_export_names(&mut self, it: &mut ArenaVec<'a, ModuleExportName<'a>>) {
+        walk_module_export_names(self, it);
+    }
+
+    #[inline]
     fn visit_import_attributes(&mut self, it: &mut ArenaVec<'a, ImportAttribute<'a>>) {
         walk_import_attributes(self, it);
     }
@@ -2933,6 +2938,9 @@ pub mod walk_mut {
         let kind = AstType::ImportNamespaceSpecifier;
         visitor.enter_node(kind);
         visitor.visit_span(&mut it.span);
+        if let Some(exports_filter) = &mut it.exports_filter {
+            visitor.visit_module_export_names(exports_filter);
+        }
         visitor.visit_binding_identifier(&mut it.local);
         visitor.leave_node(kind);
     }
@@ -3031,6 +3039,9 @@ pub mod walk_mut {
         let kind = AstType::ExportAllDeclaration;
         visitor.enter_node(kind);
         visitor.visit_span(&mut it.span);
+        if let Some(exports_filter) = &mut it.exports_filter {
+            visitor.visit_module_export_names(exports_filter);
+        }
         if let Some(exported) = &mut it.exported {
             visitor.visit_module_export_name(exported);
         }
@@ -4719,6 +4730,16 @@ pub mod walk_mut {
     ) {
         for el in it {
             visitor.visit_import_declaration_specifier(el);
+        }
+    }
+
+    #[inline]
+    pub fn walk_module_export_names<'a, V: VisitMut<'a>>(
+        visitor: &mut V,
+        it: &mut ArenaVec<'a, ModuleExportName<'a>>,
+    ) {
+        for el in it {
+            visitor.visit_module_export_name(el);
         }
     }
 

@@ -89,6 +89,7 @@ impl<'a, C: Config> ParserImpl<'a, C> {
 
         let mut phase = None;
         let mut import_kind = ImportOrExportKind::Value;
+        let mut check_defer_named_imports = false;
 
         if self.at(Kind::Eq)
             && let Some(identifier_after_import) = identifier_after_import
@@ -152,10 +153,9 @@ impl<'a, C: Config> ParserImpl<'a, C> {
                 phase = Some(ImportPhase::Defer);
                 has_default_specifier = false;
             } else if self.at(Kind::LCurly) {
-                // `import defer { ... } from 'source'`
-                self.error(diagnostics::named_import_not_allowed_in_defer(
-                    token_after_import.span(),
-                ));
+                // `import defer { ... } as ns from 'source'` is valid,
+                // `import defer { ... } from 'source'` is reported below.
+                check_defer_named_imports = true;
                 phase = Some(ImportPhase::Defer);
                 has_default_specifier = false;
             } else if self.cur_kind().is_binding_identifier()
@@ -251,6 +251,16 @@ impl<'a, C: Config> ParserImpl<'a, C> {
             Some(self.parse_import_declaration_specifiers(default_specifier, import_kind))
         };
 
+        if check_defer_named_imports
+            && !matches!(
+                specifiers.as_ref().map(|specifiers| specifiers.as_slice()),
+                Some([ImportDeclarationSpecifier::ImportNamespaceSpecifier(_)])
+            )
+        {
+            // `import defer { ... } from 'source'`
+            self.error(diagnostics::named_import_not_allowed_in_defer(token_after_import.span()));
+        }
+
         let source = self.parse_literal_string();
         let with_clause = self.parse_import_attributes();
         self.asi();
@@ -309,13 +319,17 @@ impl<'a, C: Config> ParserImpl<'a, C> {
                         specifiers.push(specifier);
                     }
                     // import defaultExport, { export1 [ , [...] ] } from "module-name";
+                    // import defaultExport, { export1 [ , [...] ] } as name from "module-name";
                     Kind::LCurly => {
                         if self.is_ts && import_kind == ImportOrExportKind::Type {
                             self.error(diagnostics::type_only_import_default_and_named(
                                 default_span,
                             ));
                         }
-                        self.parse_import_specifiers_into(&mut specifiers, import_kind);
+                        self.parse_named_imports_or_filtered_namespace(
+                            &mut specifiers,
+                            import_kind,
+                        );
                     }
                     _ => return self.unexpected(),
                 }
@@ -337,7 +351,8 @@ impl<'a, C: Config> ParserImpl<'a, C> {
             specifiers.push(specifier);
         } else if self.at(Kind::LCurly) {
             // import { export1 , export2 as alias2 , [...] } from "module-name";
-            self.parse_import_specifiers_into(&mut specifiers, import_kind);
+            // import { export1 , export2 , [...] } as name from "module-name";
+            self.parse_named_imports_or_filtered_namespace(&mut specifiers, import_kind);
         }
 
         self.expect(Kind::From);
@@ -351,7 +366,94 @@ impl<'a, C: Config> ParserImpl<'a, C> {
         self.expect(Kind::As);
         let local = self.parse_binding_identifier();
         let span = self.end_span(start);
-        ImportDeclarationSpecifier::new_import_namespace_specifier(span, local, self)
+        ImportDeclarationSpecifier::new_import_namespace_specifier(span, None, local, self)
+    }
+
+    // NamedImports
+    // NameSpaceImport : NamedImports `as` ImportedBinding
+    //
+    // A filtered namespace is only known once `as` follows the closing `}`, and its names follow
+    // different rules from named imports (string names need no alias, aliases are not allowed).
+    // So parse named imports, and re-parse from the checkpoint in the rare case that `as` follows.
+    // <https://github.com/tc39/proposal-deferred-reexports>
+    fn parse_named_imports_or_filtered_namespace(
+        &mut self,
+        specifiers: &mut ArenaVec<'a, ImportDeclarationSpecifier<'a>>,
+        import_kind: ImportOrExportKind,
+    ) {
+        let checkpoint = self.checkpoint();
+        let len = specifiers.len();
+        self.parse_import_specifiers_into(specifiers, import_kind);
+        if self.at(Kind::As) {
+            // import { export1 , export2 } as name from "module-name";
+            self.rewind(checkpoint);
+            specifiers.truncate(len);
+            let start = self.cur_start();
+            let exports_filter = self.parse_filtered_namespace_names();
+            self.expect(Kind::As);
+            let local = self.parse_binding_identifier();
+            let span = self.end_span(start);
+            specifiers.push(ImportDeclarationSpecifier::new_import_namespace_specifier(
+                span,
+                Some(exports_filter),
+                local,
+                self,
+            ));
+        }
+    }
+
+    // The `{ a, "b" }` of a filtered namespace:
+    // `import { a, "b" } as ns from "source"`, `export { a, "b" } as ns from "source"`
+    fn parse_filtered_namespace_names(&mut self) -> ArenaVec<'a, ModuleExportName<'a>> {
+        let opening_span = self.cur_token().span();
+        self.expect(Kind::LCurly);
+        let (names, _) = self.context_remove(self.ctx, |p| {
+            p.parse_delimited_list(
+                Kind::RCurly,
+                Kind::Comma,
+                opening_span,
+                Self::parse_filtered_namespace_name,
+            )
+        });
+        self.expect(Kind::RCurly);
+
+        // It is a Syntax Error if the FilteredNamespaceNames of NamedImports / NamedExports
+        // contains any duplicate entries.
+        let mut seen = FxHashMap::default();
+        for name in &names {
+            let value = name.name().as_str();
+            if let Some(first_span) = seen.insert(value, name.span()) {
+                self.error(diagnostics::filtered_namespace_duplicate(
+                    value,
+                    first_span,
+                    name.span(),
+                ));
+            }
+        }
+
+        names
+    }
+
+    fn parse_filtered_namespace_name(&mut self) -> ModuleExportName<'a> {
+        let start = self.cur_start();
+        let token = self.cur_token();
+        let mut name = self.parse_module_export_name();
+        if self.is_ts
+            && token.kind() == Kind::Type
+            && !self.at(Kind::As)
+            && self.can_parse_module_export_name()
+        {
+            // `import { type a } as ns from "source"`
+            self.error(diagnostics::filtered_namespace_type_modifier(token.span()));
+            name = self.parse_module_export_name();
+        }
+        if self.eat(Kind::As) {
+            // It is a Syntax Error if the NamedImports / NamedExports Contains
+            // AliasedImportSpecifier / AliasedExportSpecifier.
+            let _ = self.parse_module_export_name();
+            self.error(diagnostics::filtered_namespace_rename(self.end_span(start)));
+        }
+        name
     }
 
     // import { export1 , export2 as alias2 , [...] } from "module-name";
@@ -597,6 +699,7 @@ impl<'a, C: Config> ParserImpl<'a, C> {
     //   ModuleExportName as ModuleExportName
     //
     // export defer NamedExports FromClause ;
+    // export defer? NamedExports as ModuleExportName FromClause ;
     fn parse_export_named_specifiers(
         &mut self,
         start: u32,
@@ -608,6 +711,7 @@ impl<'a, C: Config> ParserImpl<'a, C> {
         } else {
             self.parse_import_or_export_kind()
         };
+        let checkpoint = self.checkpoint();
         let opening_span = self.cur_token().span();
         self.expect(Kind::LCurly);
         let (mut specifiers, _) = self.context_remove(self.ctx, |p| {
@@ -616,6 +720,17 @@ impl<'a, C: Config> ParserImpl<'a, C> {
             })
         });
         self.expect(Kind::RCurly);
+        // `export { a }` followed by `as` on the next line is two statements, as it was before
+        // filtered namespaces: `export { a }\nas(1);`
+        if self.at(Kind::As) && !self.cur_token().is_on_new_line() {
+            // `export { a, b } as ns from 'source'`
+            self.rewind(checkpoint);
+            return ModuleDeclaration::ExportAllDeclaration(self.parse_filtered_namespace_export(
+                start,
+                phase,
+                export_kind,
+            ));
+        }
         // `export defer { ... }` requires a `from` clause.
         if phase.is_some() {
             self.expect_without_advance(Kind::From);
@@ -877,7 +992,40 @@ impl<'a, C: Config> ParserImpl<'a, C> {
         let span = self.end_span(start);
         let export_all_decl = ExportAllDeclaration::boxed(
             span,
+            None,
             exported,
+            source,
+            phase,
+            with_clause,
+            export_kind,
+            self,
+        );
+        if self.ctx.has_top_level() {
+            self.module_record_builder.visit_export_all_declaration(&export_all_decl);
+        }
+        export_all_decl
+    }
+
+    // export defer? NamedExports as ModuleExportName FromClause ;
+    // <https://github.com/tc39/proposal-deferred-reexports>
+    fn parse_filtered_namespace_export(
+        &mut self,
+        start: u32,
+        phase: Option<ImportPhase>,
+        export_kind: ImportOrExportKind,
+    ) -> ArenaBox<'a, ExportAllDeclaration<'a>> {
+        let exports_filter = self.parse_filtered_namespace_names();
+        self.expect(Kind::As);
+        let exported = self.parse_module_export_name();
+        self.expect(Kind::From);
+        let source = self.parse_literal_string();
+        let with_clause = self.parse_import_attributes();
+        self.asi();
+        let span = self.end_span(start);
+        let export_all_decl = ExportAllDeclaration::boxed(
+            span,
+            Some(exports_filter),
+            Some(exported),
             source,
             phase,
             with_clause,

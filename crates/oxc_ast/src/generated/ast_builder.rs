@@ -9060,6 +9060,7 @@ impl<'a> Statement<'a> {
     ///
     /// ## Parameters
     /// * `span`: The [`Span`] covering this node
+    /// * `exports_filter`: The names in a filtered namespace re-export: `Some([a, b])` for
     /// * `exported`: If this declaration is re-named
     /// * `source`
     /// * `phase`: `Some(ImportPhase::Defer)` for `export defer * as ns from 'module'`.
@@ -9068,6 +9069,7 @@ impl<'a> Statement<'a> {
     #[inline]
     pub fn new_export_all_declaration(
         span: Span,
+        exports_filter: Option<ArenaVec<'a, ModuleExportName<'a>>>,
         exported: Option<ModuleExportName<'a>>,
         source: StringLiteral<'a>,
         phase: Option<ImportPhase>,
@@ -9077,6 +9079,7 @@ impl<'a> Statement<'a> {
     ) -> Self {
         Self::ExportAllDeclaration(ExportAllDeclaration::boxed(
             span,
+            exports_filter,
             exported,
             source,
             phase,
@@ -15678,6 +15681,7 @@ impl<'a> ModuleDeclaration<'a> {
     ///
     /// ## Parameters
     /// * `span`: The [`Span`] covering this node
+    /// * `exports_filter`: The names in a filtered namespace re-export: `Some([a, b])` for
     /// * `exported`: If this declaration is re-named
     /// * `source`
     /// * `phase`: `Some(ImportPhase::Defer)` for `export defer * as ns from 'module'`.
@@ -15686,6 +15690,7 @@ impl<'a> ModuleDeclaration<'a> {
     #[inline]
     pub fn new_export_all_declaration(
         span: Span,
+        exports_filter: Option<ArenaVec<'a, ModuleExportName<'a>>>,
         exported: Option<ModuleExportName<'a>>,
         source: StringLiteral<'a>,
         phase: Option<ImportPhase>,
@@ -15695,6 +15700,7 @@ impl<'a> ModuleDeclaration<'a> {
     ) -> Self {
         Self::ExportAllDeclaration(ExportAllDeclaration::boxed(
             span,
+            exports_filter,
             exported,
             source,
             phase,
@@ -16095,15 +16101,18 @@ impl<'a> ImportDeclarationSpecifier<'a> {
     ///
     /// ## Parameters
     /// * `span`: The [`Span`] covering this node
+    /// * `exports_filter`: The names in a filtered namespace import: `Some([a, b])` for `import { a, b } as ns`.
     /// * `local`
     #[inline]
     pub fn new_import_namespace_specifier(
         span: Span,
+        exports_filter: Option<ArenaVec<'a, ModuleExportName<'a>>>,
         local: BindingIdentifier<'a>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
         Self::ImportNamespaceSpecifier(ImportNamespaceSpecifier::boxed(
             span,
+            exports_filter,
             local,
             builder.builder(),
         ))
@@ -16207,11 +16216,22 @@ impl<'a> ImportNamespaceSpecifier<'a> {
     ///
     /// ## Parameters
     /// * `span`: The [`Span`] covering this node
+    /// * `exports_filter`: The names in a filtered namespace import: `Some([a, b])` for `import { a, b } as ns`.
     /// * `local`
     #[inline]
-    pub fn new(span: Span, local: BindingIdentifier<'a>, builder: &impl GetAstBuilder<'a>) -> Self {
+    pub fn new(
+        span: Span,
+        exports_filter: Option<ArenaVec<'a, ModuleExportName<'a>>>,
+        local: BindingIdentifier<'a>,
+        builder: &impl GetAstBuilder<'a>,
+    ) -> Self {
         let builder = builder.builder();
-        ImportNamespaceSpecifier { node_id: Cell::new(builder.node_id()), span, local }
+        ImportNamespaceSpecifier {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            exports_filter,
+            local,
+        }
     }
 
     /// Build an [`ImportNamespaceSpecifier`], and store it in the memory arena.
@@ -16221,15 +16241,17 @@ impl<'a> ImportNamespaceSpecifier<'a> {
     ///
     /// ## Parameters
     /// * `span`: The [`Span`] covering this node
+    /// * `exports_filter`: The names in a filtered namespace import: `Some([a, b])` for `import { a, b } as ns`.
     /// * `local`
     #[inline]
     pub fn boxed(
         span: Span,
+        exports_filter: Option<ArenaVec<'a, ModuleExportName<'a>>>,
         local: BindingIdentifier<'a>,
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, local, builder), &builder.allocator())
+        ArenaBox::new_in(Self::new(span, exports_filter, local, builder), &builder.allocator())
     }
 }
 
@@ -16547,6 +16569,7 @@ impl<'a> ExportAllDeclaration<'a> {
     ///
     /// ## Parameters
     /// * `span`: The [`Span`] covering this node
+    /// * `exports_filter`: The names in a filtered namespace re-export: `Some([a, b])` for
     /// * `exported`: If this declaration is re-named
     /// * `source`
     /// * `phase`: `Some(ImportPhase::Defer)` for `export defer * as ns from 'module'`.
@@ -16555,6 +16578,7 @@ impl<'a> ExportAllDeclaration<'a> {
     #[inline]
     pub fn new(
         span: Span,
+        exports_filter: Option<ArenaVec<'a, ModuleExportName<'a>>>,
         exported: Option<ModuleExportName<'a>>,
         source: StringLiteral<'a>,
         phase: Option<ImportPhase>,
@@ -16566,6 +16590,7 @@ impl<'a> ExportAllDeclaration<'a> {
         ExportAllDeclaration {
             node_id: Cell::new(builder.node_id()),
             span,
+            exports_filter,
             exported,
             source,
             phase,
@@ -16581,6 +16606,7 @@ impl<'a> ExportAllDeclaration<'a> {
     ///
     /// ## Parameters
     /// * `span`: The [`Span`] covering this node
+    /// * `exports_filter`: The names in a filtered namespace re-export: `Some([a, b])` for
     /// * `exported`: If this declaration is re-named
     /// * `source`
     /// * `phase`: `Some(ImportPhase::Defer)` for `export defer * as ns from 'module'`.
@@ -16589,6 +16615,7 @@ impl<'a> ExportAllDeclaration<'a> {
     #[inline]
     pub fn boxed(
         span: Span,
+        exports_filter: Option<ArenaVec<'a, ModuleExportName<'a>>>,
         exported: Option<ModuleExportName<'a>>,
         source: StringLiteral<'a>,
         phase: Option<ImportPhase>,
@@ -16598,7 +16625,16 @@ impl<'a> ExportAllDeclaration<'a> {
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
         ArenaBox::new_in(
-            Self::new(span, exported, source, phase, with_clause, export_kind, builder),
+            Self::new(
+                span,
+                exports_filter,
+                exported,
+                source,
+                phase,
+                with_clause,
+                export_kind,
+                builder,
+            ),
             &builder.allocator(),
         )
     }

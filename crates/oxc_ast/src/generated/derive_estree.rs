@@ -1734,6 +1734,7 @@ impl ESTree for ImportNamespaceSpecifier<'_> {
     fn serialize<S: Serializer>(&self, serializer: S) {
         let mut state = serializer.serialize_struct();
         state.serialize_field("type", &JsonSafeString("ImportNamespaceSpecifier"));
+        state.serialize_field("exportsFilter", &self.exports_filter);
         state.serialize_field("local", &self.local);
         state.serialize_span(self.span);
         state.end();
@@ -1835,6 +1836,7 @@ impl ESTree for ExportAllDeclaration<'_> {
         let mut state = serializer.serialize_struct();
         state.serialize_field("type", &JsonSafeString("ExportAllDeclaration"));
         state.serialize_field("exported", &self.exported);
+        state.serialize_field("exportsFilter", &self.exports_filter);
         state.serialize_field("source", &self.source);
         state.serialize_field("phase", &self.phase);
         state.serialize_field(

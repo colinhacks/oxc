@@ -13,7 +13,7 @@ use crate::{
         trivia::{FormatLeadingComments, FormatTrailingComments},
     },
     print::{
-        import_declaration::format_source_with_clause_and_semicolon,
+        import_declaration::{format_namespace_exports, format_source_with_clause_and_semicolon},
         semicolon::{
             FormatContentWithSemicolon, OptionalSemicolon,
             semicolon_terminated_expression_content_end,
@@ -153,7 +153,9 @@ impl<'a> FormatWrite<'a> for AstNode<'a, ExportAllDeclaration<'a>> {
             if let Some(phase) = self.phase() {
                 write!(f, phase);
             }
-            write!(f, [self.export_kind(), "*", space()]);
+            write!(f, self.export_kind());
+            format_namespace_exports(self.exports_filter(), f);
+            write!(f, space());
             if let Some(name) = &self.exported() {
                 write!(f, ["as", space(), name, space()]);
             }

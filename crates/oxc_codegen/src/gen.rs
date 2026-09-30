@@ -964,7 +964,11 @@ impl Gen for ImportDeclaration<'_> {
                             p.print_comma();
                             p.print_soft_space();
                         }
-                        p.print_ascii_byte(b'*');
+                        print_namespace_exports(
+                            p,
+                            ctx,
+                            spec.exports_filter.as_ref().map(|names| names.as_slice()),
+                        );
                         p.print_soft_space();
                         p.print_str("as ");
                         spec.local.print(p, ctx);
@@ -1126,6 +1130,25 @@ impl Gen for ExportFromDeclaration<'_> {
     }
 }
 
+/// Print the `*` of `* as ns`, or the `{ a, b }` of a filtered namespace `{ a, b } as ns`.
+fn print_namespace_exports(
+    p: &mut Codegen,
+    ctx: Context,
+    exports_filter: Option<&[ModuleExportName<'_>]>,
+) {
+    let Some(names) = exports_filter else {
+        p.print_ascii_byte(b'*');
+        return;
+    };
+    p.print_ascii_byte(b'{');
+    if !names.is_empty() {
+        p.print_soft_space();
+        p.print_list(names, ctx);
+        p.print_soft_space();
+    }
+    p.print_ascii_byte(b'}');
+}
+
 fn gen_export_specifiers(
     p: &mut Codegen,
     ctx: Context,
@@ -1239,7 +1262,7 @@ impl Gen for ExportAllDeclaration<'_> {
             p.print_str(" type");
         }
         p.print_soft_space();
-        p.print_ascii_byte(b'*');
+        print_namespace_exports(p, ctx, self.exports_filter.as_ref().map(|names| names.as_slice()));
 
         if let Some(exported) = &self.exported {
             p.print_soft_space();

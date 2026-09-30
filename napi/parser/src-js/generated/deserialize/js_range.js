@@ -2473,12 +2473,14 @@ function deserializeImportNamespaceSpecifier(pos) {
     end,
     node = {
       type: "ImportNamespaceSpecifier",
+      exportsFilter: null,
       local: null,
       start: (start = deserializeI32(pos)),
       end: (end = deserializeI32(pos + 4)),
       range: [start, end],
     };
-  node.local = deserializeBindingIdentifier(pos + 16);
+  node.exportsFilter = deserializeOptionVecModuleExportName(pos + 16);
+  node.local = deserializeBindingIdentifier(pos + 40);
   return node;
 }
 
@@ -2590,6 +2592,7 @@ function deserializeExportAllDeclaration(pos) {
     node = {
       type: "ExportAllDeclaration",
       exported: null,
+      exportsFilter: null,
       source: null,
       phase: deserializeOptionImportPhase(pos + 12),
       attributes: null,
@@ -2597,9 +2600,10 @@ function deserializeExportAllDeclaration(pos) {
       end: (end = deserializeI32(pos + 4)),
       range: [start, end],
     },
-    withClause = deserializeOptionBoxWithClause(pos + 120);
-  node.exported = deserializeOptionModuleExportName(pos + 16);
-  node.source = deserializeStringLiteral(pos + 72);
+    withClause = deserializeOptionBoxWithClause(pos + 144);
+  node.exported = deserializeOptionModuleExportName(pos + 40);
+  node.exportsFilter = deserializeOptionVecModuleExportName(pos + 16);
+  node.source = deserializeStringLiteral(pos + 96);
   node.attributes = withClause === null ? [] : withClause.attributes;
   return node;
 }
@@ -6121,6 +6125,24 @@ function deserializeBoxImportDefaultSpecifier(pos) {
 
 function deserializeBoxImportNamespaceSpecifier(pos) {
   return deserializeImportNamespaceSpecifier(int32[pos >> 2]);
+}
+
+function deserializeVecModuleExportName(pos) {
+  let arr = [],
+    pos32 = pos >> 2;
+  pos = int32[pos32];
+  let endPos = pos + int32[pos32 + 2] * 56;
+  for (; pos !== endPos;) {
+    arr.push(deserializeModuleExportName(pos));
+    pos += 56;
+  }
+  return arr;
+}
+
+function deserializeOptionVecModuleExportName(pos) {
+  return int32[pos >> 2] === 0 && int32[(pos >> 2) + 1] === 0
+    ? null
+    : deserializeVecModuleExportName(pos);
 }
 
 function deserializeVecImportAttribute(pos) {

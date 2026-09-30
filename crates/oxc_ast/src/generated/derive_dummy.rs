@@ -1598,6 +1598,7 @@ impl<'a> Dummy<'a> for ImportNamespaceSpecifier<'a> {
         Self {
             node_id: Dummy::dummy(allocator),
             span: Dummy::dummy(allocator),
+            exports_filter: Dummy::dummy(allocator),
             local: Dummy::dummy(allocator),
         }
     }
@@ -1715,6 +1716,7 @@ impl<'a> Dummy<'a> for ExportAllDeclaration<'a> {
         Self {
             node_id: Dummy::dummy(allocator),
             span: Dummy::dummy(allocator),
+            exports_filter: Dummy::dummy(allocator),
             exported: Dummy::dummy(allocator),
             source: Dummy::dummy(allocator),
             phase: Dummy::dummy(allocator),

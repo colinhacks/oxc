@@ -451,9 +451,16 @@ impl<'a> PeepholeOptimizations {
                     [ImportDeclarationSpecifier::ImportNamespaceSpecifier(_)]
                 );
                 if is_namespace_import {
+                    let Some(ImportDeclarationSpecifier::ImportNamespaceSpecifier(namespace)) =
+                        import_specifiers.pop()
+                    else {
+                        unreachable!();
+                    };
                     let exported = export_decl.specifiers.pop().unwrap().exported;
+                    // `import { a } as ns from "mod"; export { ns }` -> `export { a } as ns from "mod"`
                     return Statement::new_export_all_declaration(
                         export_decl.span,
+                        namespace.unbox().exports_filter,
                         Some(exported),
                         source,
                         None,

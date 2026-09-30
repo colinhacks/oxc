@@ -1369,6 +1369,23 @@ parser_diagnostics! {
             .with_label(span)
     };
 
+    filtered_namespace_rename(span: Span) => {
+        OxcDiagnostic::error("Names in a filtered namespace cannot be renamed using `as`")
+            .with_label(span)
+    };
+
+    filtered_namespace_type_modifier(span: Span) => {
+        OxcDiagnostic::error("Names in a filtered namespace cannot have a `type` modifier")
+            .with_label(span)
+    };
+
+    filtered_namespace_duplicate(name: &'a str, span1: Span, span2: Span) => {
+        OxcDiagnostic::error(format!("Duplicate name `{name}` in filtered namespace")).with_labels([
+            span1.label(format!("`{name}` is first listed here")),
+            span2.label("and listed again here"),
+        ])
+    };
+
     export_defer_star_without_as(span: Span) => {
         OxcDiagnostic::error("`export defer *` is not allowed. Explicitly list the re-exported names.")
             .with_help("Use `export defer { ... } from` or `export defer * as ns from`")

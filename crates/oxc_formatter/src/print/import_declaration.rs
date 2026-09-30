@@ -196,7 +196,34 @@ impl<'a> FormatWrite<'a> for AstNode<'a, ImportDefaultSpecifier<'a>> {
 
 impl<'a> FormatWrite<'a> for AstNode<'a, ImportNamespaceSpecifier<'a>> {
     fn write(&self, f: &mut JsFormatter<'_, 'a>) {
-        write!(f, ["*", space(), "as", space(), self.local()]);
+        format_namespace_exports(self.exports_filter(), f);
+        write!(f, [space(), "as", space(), self.local()]);
+    }
+}
+
+/// Formats the `*` of `* as ns`, or the `{ a, b }` of a filtered namespace `{ a, b } as ns`.
+pub fn format_namespace_exports<'a>(
+    exports_filter: Option<&AstNode<'a, ArenaVec<'a, ModuleExportName<'a>>>>,
+    f: &mut JsFormatter<'_, 'a>,
+) {
+    let Some(names) = exports_filter else {
+        write!(f, "*");
+        return;
+    };
+    if names.is_empty() {
+        write!(f, "{}");
+    } else {
+        let needs_space = f.options().bracket_spacing.value();
+        write!(f, ["{", group(&soft_block_indent_with_maybe_space(names, needs_space)), "}"]);
+    }
+}
+
+impl<'a> Format<'a, JsFormatContext<'a>> for AstNode<'a, ArenaVec<'a, ModuleExportName<'a>>> {
+    fn fmt(&self, f: &mut JsFormatter<'_, 'a>) {
+        let trailing_separator = FormatTrailingCommas::ES5.trailing_separator(f.options());
+        f.join_with(soft_line_break_or_space()).entries(
+            FormatSeparatedIter::new(self.iter(), ",").with_trailing_separator(trailing_separator),
+        );
     }
 }
 

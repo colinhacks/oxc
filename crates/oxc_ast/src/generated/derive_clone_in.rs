@@ -2882,6 +2882,11 @@ impl<'new_alloc> CloneIn<'new_alloc> for ImportNamespaceSpecifier<'_> {
         ImportNamespaceSpecifier {
             node_id: CloneIn::clone_in_impl(&self.node_id, with_semantic_ids, allocator),
             span: CloneIn::clone_in_impl(&self.span, with_semantic_ids, allocator),
+            exports_filter: CloneIn::clone_in_impl(
+                &self.exports_filter,
+                with_semantic_ids,
+                allocator,
+            ),
             local: CloneIn::clone_in_impl(&self.local, with_semantic_ids, allocator),
         }
     }
@@ -3037,6 +3042,11 @@ impl<'new_alloc> CloneIn<'new_alloc> for ExportAllDeclaration<'_> {
         ExportAllDeclaration {
             node_id: CloneIn::clone_in_impl(&self.node_id, with_semantic_ids, allocator),
             span: CloneIn::clone_in_impl(&self.span, with_semantic_ids, allocator),
+            exports_filter: CloneIn::clone_in_impl(
+                &self.exports_filter,
+                with_semantic_ids,
+                allocator,
+            ),
             exported: CloneIn::clone_in_impl(&self.exported, with_semantic_ids, allocator),
             source: CloneIn::clone_in_impl(&self.source, with_semantic_ids, allocator),
             phase: CloneIn::clone_in_impl(&self.phase, with_semantic_ids, allocator),

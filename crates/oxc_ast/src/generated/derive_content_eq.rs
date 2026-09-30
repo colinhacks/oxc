@@ -1402,7 +1402,8 @@ impl ContentEq for ImportDefaultSpecifier<'_> {
 
 impl ContentEq for ImportNamespaceSpecifier<'_> {
     fn content_eq(&self, other: &Self) -> bool {
-        ContentEq::content_eq(&self.local, &other.local)
+        ContentEq::content_eq(&self.exports_filter, &other.exports_filter)
+            && ContentEq::content_eq(&self.local, &other.local)
     }
 }
 
@@ -1467,7 +1468,8 @@ impl ContentEq for ExportDefaultDeclaration<'_> {
 
 impl ContentEq for ExportAllDeclaration<'_> {
     fn content_eq(&self, other: &Self) -> bool {
-        ContentEq::content_eq(&self.exported, &other.exported)
+        ContentEq::content_eq(&self.exports_filter, &other.exports_filter)
+            && ContentEq::content_eq(&self.exported, &other.exported)
             && ContentEq::content_eq(&self.source, &other.source)
             && ContentEq::content_eq(&self.phase, &other.phase)
             && ContentEq::content_eq(&self.with_clause, &other.with_clause)

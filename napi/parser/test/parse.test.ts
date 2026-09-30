@@ -487,6 +487,7 @@ describe("parse", () => {
               type: "ImportNamespaceSpecifier",
               start: 13,
               end: 20,
+              exportsFilter: null,
               local: { type: "Identifier", start: 18, end: 20, name: "ns" },
             },
           ],
@@ -509,6 +510,7 @@ describe("parse", () => {
               type: "ImportNamespaceSpecifier",
               start: 13,
               end: 20,
+              exportsFilter: null,
               local: {
                 type: "Identifier",
                 start: 18,
@@ -688,8 +690,43 @@ describe("parse", () => {
         start: 0,
         end: 30,
         exported: { type: "Identifier", start: 18, end: 20, name: "ns" },
+        exportsFilter: null,
         source: { type: "Literal", start: 26, end: 29, value: "x", raw: '"x"' },
         phase: "defer",
+        attributes: [],
+      });
+    });
+  });
+
+  describe("filtered namespace", () => {
+    it("`ImportNamespaceSpecifier`", () => {
+      const ret = parseSync("test.js", 'import { a } as ns from "x";');
+      expect(ret.errors.length).toBe(0);
+      expect(ret.program.body.length).toBe(1);
+      // @ts-expect-error - ignore
+      expect(ret.program.body[0].specifiers).toEqual([
+        {
+          type: "ImportNamespaceSpecifier",
+          start: 7,
+          end: 18,
+          exportsFilter: [{ type: "Identifier", start: 9, end: 10, name: "a" }],
+          local: { type: "Identifier", start: 16, end: 18, name: "ns" },
+        },
+      ]);
+    });
+
+    it("`ExportAllDeclaration`", () => {
+      const ret = parseSync("test.js", 'export { a } as ns from "x";');
+      expect(ret.errors.length).toBe(0);
+      expect(ret.program.body.length).toBe(1);
+      expect(ret.program.body[0]).toEqual({
+        type: "ExportAllDeclaration",
+        start: 0,
+        end: 28,
+        exported: { type: "Identifier", start: 16, end: 18, name: "ns" },
+        exportsFilter: [{ type: "Identifier", start: 9, end: 10, name: "a" }],
+        source: { type: "Literal", start: 24, end: 27, value: "x", raw: '"x"' },
+        phase: null,
         attributes: [],
       });
     });

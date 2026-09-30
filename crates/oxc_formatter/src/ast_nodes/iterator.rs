@@ -161,6 +161,7 @@ impl_ast_node_vec!(ClassElement<'a>);
 impl_ast_node_vec!(ImportDeclarationSpecifier<'a>);
 impl_ast_node_vec!(ImportAttribute<'a>);
 impl_ast_node_vec!(ExportSpecifier<'a>);
+impl_ast_node_vec!(ModuleExportName<'a>);
 impl_ast_node_vec!(JSXAttributeItem<'a>);
 impl_ast_node_vec!(JSXChild<'a>);
 impl_ast_node_vec!(TSEnumMember<'a>);

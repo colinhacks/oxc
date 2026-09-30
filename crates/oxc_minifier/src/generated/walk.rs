@@ -3004,9 +3004,18 @@ unsafe fn walk_import_namespace_specifier<'a, Tr: Traverse<'a>>(
     ctx: &mut TraverseCtx<'a>,
 ) {
     traverser.enter_import_namespace_specifier(&mut *node, ctx);
-    let pop_token = ctx.push_stack(Ancestor::ImportNamespaceSpecifierLocal(
-        ancestor::ImportNamespaceSpecifierWithoutLocal(node, PhantomData),
+    let pop_token = ctx.push_stack(Ancestor::ImportNamespaceSpecifierExportsFilter(
+        ancestor::ImportNamespaceSpecifierWithoutExportsFilter(node, PhantomData),
     ));
+    if let Some(field) = &mut *((node as *mut u8)
+        .add(ancestor::OFFSET_IMPORT_NAMESPACE_SPECIFIER_EXPORTS_FILTER)
+        as *mut Option<ArenaVec<ModuleExportName>>)
+    {
+        for item in field.iter_mut() {
+            walk_module_export_name(traverser, item as *mut _, ctx);
+        }
+    }
+    ctx.retag_stack(AncestorType::ImportNamespaceSpecifierLocal);
     walk_binding_identifier(
         traverser,
         (node as *mut u8).add(ancestor::OFFSET_IMPORT_NAMESPACE_SPECIFIER_LOCAL)
@@ -3169,13 +3178,22 @@ unsafe fn walk_export_all_declaration<'a, Tr: Traverse<'a>>(
     ctx: &mut TraverseCtx<'a>,
 ) {
     traverser.enter_export_all_declaration(&mut *node, ctx);
-    let pop_token = ctx.push_stack(Ancestor::ExportAllDeclarationExported(
-        ancestor::ExportAllDeclarationWithoutExported(node, PhantomData),
+    let pop_token = ctx.push_stack(Ancestor::ExportAllDeclarationExportsFilter(
+        ancestor::ExportAllDeclarationWithoutExportsFilter(node, PhantomData),
     ));
+    if let Some(field) = &mut *((node as *mut u8)
+        .add(ancestor::OFFSET_EXPORT_ALL_DECLARATION_EXPORTS_FILTER)
+        as *mut Option<ArenaVec<ModuleExportName>>)
+    {
+        for item in field.iter_mut() {
+            walk_module_export_name(traverser, item as *mut _, ctx);
+        }
+    }
     if let Some(field) = &mut *((node as *mut u8)
         .add(ancestor::OFFSET_EXPORT_ALL_DECLARATION_EXPORTED)
         as *mut Option<ModuleExportName>)
     {
+        ctx.retag_stack(AncestorType::ExportAllDeclarationExported);
         walk_module_export_name(traverser, field as *mut _, ctx);
     }
     ctx.retag_stack(AncestorType::ExportAllDeclarationSource);

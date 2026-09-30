@@ -5880,7 +5880,7 @@ export class ImportNamespaceSpecifier {
     const cached = nodes.get(pos);
     if (cached !== void 0) return cached;
 
-    this.#internal = { pos, ast };
+    this.#internal = { pos, ast, $exportsFilter: void 0 };
     nodes.set(pos, this);
   }
 
@@ -5894,9 +5894,19 @@ export class ImportNamespaceSpecifier {
     return constructI32(internal.pos + 4, internal.ast);
   }
 
+  get exportsFilter() {
+    const internal = this.#internal,
+      cached = internal.$exportsFilter;
+    if (cached !== void 0) return cached;
+    return (internal.$exportsFilter = constructOptionVecModuleExportName(
+      internal.pos + 16,
+      internal.ast,
+    ));
+  }
+
   get local() {
     const internal = this.#internal;
-    return new BindingIdentifier(internal.pos + 16, internal.ast);
+    return new BindingIdentifier(internal.pos + 40, internal.ast);
   }
 
   toJSON() {
@@ -5904,6 +5914,7 @@ export class ImportNamespaceSpecifier {
       type: "ImportNamespaceSpecifier",
       start: this.start,
       end: this.end,
+      exportsFilter: this.exportsFilter,
       local: this.local,
     };
   }
@@ -6241,7 +6252,7 @@ export class ExportAllDeclaration {
     const cached = nodes.get(pos);
     if (cached !== void 0) return cached;
 
-    this.#internal = { pos, ast };
+    this.#internal = { pos, ast, $exportsFilter: void 0 };
     nodes.set(pos, this);
   }
 
@@ -6255,14 +6266,24 @@ export class ExportAllDeclaration {
     return constructI32(internal.pos + 4, internal.ast);
   }
 
+  get exportsFilter() {
+    const internal = this.#internal,
+      cached = internal.$exportsFilter;
+    if (cached !== void 0) return cached;
+    return (internal.$exportsFilter = constructOptionVecModuleExportName(
+      internal.pos + 16,
+      internal.ast,
+    ));
+  }
+
   get exported() {
     const internal = this.#internal;
-    return constructOptionModuleExportName(internal.pos + 16, internal.ast);
+    return constructOptionModuleExportName(internal.pos + 40, internal.ast);
   }
 
   get source() {
     const internal = this.#internal;
-    return new StringLiteral(internal.pos + 72, internal.ast);
+    return new StringLiteral(internal.pos + 96, internal.ast);
   }
 
   get phase() {
@@ -6272,7 +6293,7 @@ export class ExportAllDeclaration {
 
   get attributes() {
     const internal = this.#internal;
-    return constructOptionBoxWithClause(internal.pos + 120, internal.ast);
+    return constructOptionBoxWithClause(internal.pos + 144, internal.ast);
   }
 
   get exportKind() {
@@ -6285,6 +6306,7 @@ export class ExportAllDeclaration {
       type: "ExportAllDeclaration",
       start: this.start,
       end: this.end,
+      exportsFilter: this.exportsFilter,
       exported: this.exported,
       source: this.source,
       phase: this.phase,
@@ -13681,6 +13703,17 @@ function constructBoxImportDefaultSpecifier(pos, ast) {
 
 function constructBoxImportNamespaceSpecifier(pos, ast) {
   return new ImportNamespaceSpecifier(ast.buffer.int32[pos >> 2], ast);
+}
+
+function constructVecModuleExportName(pos, ast) {
+  const { int32 } = ast.buffer,
+    pos32 = pos >> 2;
+  return new NodeArray(int32[pos32], int32[pos32 + 2], 56, constructModuleExportName, ast);
+}
+
+function constructOptionVecModuleExportName(pos, ast) {
+  if (ast.buffer.int32[pos >> 2] === 0 && ast.buffer.int32[(pos >> 2) + 1] === 0) return null;
+  return constructVecModuleExportName(pos, ast);
 }
 
 function constructVecImportAttribute(pos, ast) {

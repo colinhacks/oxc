@@ -59,8 +59,15 @@ impl<'a> Traverse<'a, TransformState<'a>> for ExportNamespaceFrom {
                     // Transform `export * as ns from "mod"` to:
                     // `import * as _ns from "mod"; export { _ns as ns };`
 
-                    let ExportAllDeclaration { span, exported, source, phase, export_kind, .. } =
-                        export_all.unbox();
+                    let ExportAllDeclaration {
+                        span,
+                        exports_filter,
+                        exported,
+                        source,
+                        phase,
+                        export_kind,
+                        ..
+                    } = export_all.unbox();
                     let exported_name = exported.unwrap();
 
                     // Create a unique binding for the import based on the exported name
@@ -70,11 +77,12 @@ impl<'a> Traverse<'a, TransformState<'a>> for ExportNamespaceFrom {
                         SymbolFlags::Import,
                     );
 
-                    // Create `import * as _ns from "mod"`, or `import defer * as _ns from "mod"`
-                    // for `export defer * as ns from "mod"`
+                    // Create `import * as _ns from "mod"`. The phase and the filter carry over:
+                    // `export defer { a } as ns from "mod"` -> `import defer { a } as _ns from "mod"`
                     let import_specifier =
                         ImportDeclarationSpecifier::new_import_namespace_specifier(
                             SPAN,
+                            exports_filter,
                             binding.create_binding_identifier(ctx),
                             ctx,
                         );

@@ -2536,6 +2536,9 @@ impl<'a> Visit<'a> for SemanticBuilder<'a> {
         self.enter_node(kind);
         specifier.bind(self);
         self.visit_span(&specifier.span);
+        if let Some(exports_filter) = &specifier.exports_filter {
+            self.visit_module_export_names(exports_filter);
+        }
         self.visit_binding_identifier(&specifier.local);
         self.leave_node(kind);
     }

@@ -867,6 +867,7 @@ export interface ImportDefaultSpecifier extends Span {
 
 export interface ImportNamespaceSpecifier extends Span {
   type: "ImportNamespaceSpecifier";
+  exportsFilter: Array<ModuleExportName> | null;
   local: BindingIdentifier;
   parent: Node;
 }
@@ -901,6 +902,7 @@ export interface ExportDefaultDeclaration extends Span {
 export interface ExportAllDeclaration extends Span {
   type: "ExportAllDeclaration";
   exported: ModuleExportName | null;
+  exportsFilter: Array<ModuleExportName> | null;
   source: StringLiteral;
   phase: ImportPhase | null;
   attributes: Array<ImportAttribute>;

@@ -626,6 +626,18 @@ fn export_defer() {
     test_minify("export defer * as ns from 'foo'", "export defer*as ns from\"foo\";");
 }
 
+#[test]
+fn filtered_namespace() {
+    test("import { a, 'b' } as ns from 'foo'", "import { a, \"b\" } as ns from \"foo\";\n");
+    test("import d, { a } as ns from 'foo'", "import d, { a } as ns from \"foo\";\n");
+    test("import defer { a } as ns from 'foo'", "import defer { a } as ns from \"foo\";\n");
+    test("import {} as ns from 'foo'", "import {} as ns from \"foo\";\n");
+    test("export { a, b } as ns from 'foo'", "export { a, b } as ns from \"foo\";\n");
+    test("export defer { a } as ns from 'foo'", "export defer { a } as ns from \"foo\";\n");
+    test_minify("import { a, b } as ns from 'foo'", "import{a,b}as ns from\"foo\";");
+    test_minify("export { a, b } as ns from 'foo'", "export{a,b}as ns from\"foo\";");
+}
+
 // <https://github.com/javascript-compiler-hints/compiler-notations-spec/blob/main/pure-notation-spec.md#semantics>
 #[test]
 fn pure_comment() {

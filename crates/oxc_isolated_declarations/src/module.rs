@@ -12,6 +12,7 @@ impl<'a> IsolatedDeclarations<'a> {
     ) -> ArenaBox<'a, ExportAllDeclaration<'a>> {
         ExportAllDeclaration::boxed(
             prev_decl.span,
+            prev_decl.exports_filter.clone_in(self.allocator()),
             prev_decl.exported.clone_in(self.allocator()),
             prev_decl.source.clone_in(self.allocator()),
             prev_decl.phase,

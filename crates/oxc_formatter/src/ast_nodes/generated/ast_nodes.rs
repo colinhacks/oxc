@@ -5919,6 +5919,19 @@ impl<'a> AstNode<'a, ImportNamespaceSpecifier<'a>> {
     }
 
     #[inline]
+    pub fn exports_filter(&self) -> Option<&AstNode<'a, ArenaVec<'a, ModuleExportName<'a>>>> {
+        let following_span_start = self.inner.local.span().start;
+        self.allocator
+            .alloc(self.inner.exports_filter.as_ref().map(|inner| AstNode {
+                inner,
+                allocator: self.allocator,
+                parent: AstNodes::ImportNamespaceSpecifier(transmute_self(self)),
+                following_span_start,
+            }))
+            .as_ref()
+    }
+
+    #[inline]
     pub fn local(&self) -> &AstNode<'a, BindingIdentifier<'a>> {
         let following_span_start = self.following_span_start;
         self.allocator.alloc(AstNode {
@@ -6186,6 +6199,25 @@ impl<'a> AstNode<'a, ExportAllDeclaration<'a>> {
     #[inline]
     pub fn node_id(&self) -> NodeId {
         self.inner.node_id()
+    }
+
+    #[inline]
+    pub fn exports_filter(&self) -> Option<&AstNode<'a, ArenaVec<'a, ModuleExportName<'a>>>> {
+        let following_span_start = self
+            .inner
+            .exported
+            .as_ref()
+            .map(|n| n.span().start)
+            .or_else(|| Some(self.inner.source.span().start))
+            .unwrap_or(0);
+        self.allocator
+            .alloc(self.inner.exports_filter.as_ref().map(|inner| AstNode {
+                inner,
+                allocator: self.allocator,
+                parent: AstNodes::ExportAllDeclaration(transmute_self(self)),
+                following_span_start,
+            }))
+            .as_ref()
     }
 
     #[inline]

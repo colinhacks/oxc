@@ -1,7 +1,7 @@
 parser_misc Summary:
-AST Parsed     : 113/113 (100.00%)
-Positive Passed: 113/113 (100.00%)
-Negative Passed: 247/247 (100.00%)
+AST Parsed     : 115/115 (100.00%)
+Positive Passed: 115/115 (100.00%)
+Negative Passed: 252/252 (100.00%)
 
   × TS(1275): 'accessor' modifier can only appear on a property declaration.
    ╭─[misc/fail/accessor-modifier-abstract-method.ts:1:29]
@@ -782,6 +782,67 @@ Negative Passed: 247/247 (100.00%)
    ·               ────────
    ╰────
 
+  × Expected `from` but found `;`
+   ╭─[misc/fail/filtered-namespace-export-without-from.js:1:19]
+ 1 │ export { a } as ns;
+   ·                   ┬
+   ·                   ╰── `from` expected
+   ╰────
+
+  × Only a single default import is allowed in a source phase import.
+   ╭─[misc/fail/filtered-namespace-source-phase.js:1:8]
+ 1 │ import source { a } as ns from "x";
+   ·        ──────
+   ╰────
+
+  × Names in a filtered namespace cannot have a `type` modifier
+   ╭─[misc/fail/filtered-namespace-type-modifier.ts:1:10]
+ 1 │ import { type a } as ns1 from "x";
+   ·          ────
+ 2 │ export { type b } as ns2 from "x";
+   ╰────
+
+  × Names in a filtered namespace cannot have a `type` modifier
+   ╭─[misc/fail/filtered-namespace-type-modifier.ts:2:10]
+ 1 │ import { type a } as ns1 from "x";
+ 2 │ export { type b } as ns2 from "x";
+   ·          ────
+   ╰────
+
+  × Names in a filtered namespace cannot be renamed using `as`
+   ╭─[misc/fail/filtered-namespace.js:1:10]
+ 1 │ import { a as b } as ns1 from "x";
+   ·          ──────
+ 2 │ import { a, "a" } as ns2 from "x";
+   ╰────
+
+  × Duplicate name `a` in filtered namespace
+   ╭─[misc/fail/filtered-namespace.js:2:10]
+ 1 │ import { a as b } as ns1 from "x";
+ 2 │ import { a, "a" } as ns2 from "x";
+   ·          ┬  ─┬─
+   ·          │   ╰── and listed again here
+   ·          ╰── `a` is first listed here
+ 3 │ export { a as b } as ns3 from "x";
+   ╰────
+
+  × Names in a filtered namespace cannot be renamed using `as`
+   ╭─[misc/fail/filtered-namespace.js:3:10]
+ 2 │ import { a, "a" } as ns2 from "x";
+ 3 │ export { a as b } as ns3 from "x";
+   ·          ──────
+ 4 │ export { a, "a" } as ns4 from "x";
+   ╰────
+
+  × Duplicate name `a` in filtered namespace
+   ╭─[misc/fail/filtered-namespace.js:4:10]
+ 3 │ export { a as b } as ns3 from "x";
+ 4 │ export { a, "a" } as ns4 from "x";
+   ·          ┬  ─┬─
+   ·          │   ╰── and listed again here
+   ·          ╰── `a` is first listed here
+   ╰────
+
   × The left-hand side of a for...in statement cannot be an await using declaration.
    ╭─[misc/fail/for-await-using-in-initializer.js:2:8]
  1 │ async function f() {
@@ -990,6 +1051,12 @@ Negative Passed: 247/247 (100.00%)
  3 │ const bar = 1;
    · ──┬──
    ·   ╰── `,` or `]` expected
+   ╰────
+
+  × TS(18059): Named imports are not allowed in a deferred import.
+   ╭─[misc/fail/import-defer-named.js:1:8]
+ 1 │ import defer { a } from "x";
+   ·        ─────
    ╰────
 
   × Expected `from` but found `string`

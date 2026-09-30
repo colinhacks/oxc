@@ -262,7 +262,7 @@ impl<'a> InjectGlobalVariables<'a> {
             InjectImportSpecifier::NamespaceSpecifier { local } => {
                 let local = inject.replace_value.as_ref().unwrap_or(local).as_str();
                 let local = BindingIdentifier::new(SPAN, Str::from_str_in(local, self), self);
-                ImportDeclarationSpecifier::new_import_namespace_specifier(SPAN, local, self)
+                ImportDeclarationSpecifier::new_import_namespace_specifier(SPAN, None, local, self)
             }
         }
     }
